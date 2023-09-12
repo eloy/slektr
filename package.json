@@ -1,15 +1,15 @@
 {
   "name": "slektr",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Select2 replacement ",
-  "main": "dist/index.js",
+  "main": "dist/slektr.js",
   "scripts": {
-    "build": "esbuild src/slektr.js --bundle --outfile=dist/index.js --target=chrome58,firefox57,safari11,edge16 --format=esm"
-
+    "build": "node esbuild.mjs"
   },
   "author": "Eloy Gomez",
   "license": "ISC",
   "dependencies": {
-    "esbuild": "0.19.2"
+    "esbuild": "0.19.2",
+    "esbuild-sass-plugin": "^2.15.0"
   }
 }

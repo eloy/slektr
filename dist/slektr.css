@@ -1,0 +1,76 @@
+/* src/slektr.scss */
+.slektr {
+  display: inline-block;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  height: auto;
+  padding: 0px;
+  margin: 0px;
+}
+.slektr-field {
+  padding: 6px 12px;
+  margin: 0px;
+  cursor: pointer;
+}
+.slektr-field-single {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.slektr-options-container {
+  position: absolute;
+  z-index: 99999;
+  background-color: white;
+  border: 1px solid #ccc;
+  padding: 6px 6px;
+}
+.slektr-options-container-list {
+  max-height: 200px;
+  margin: 0px;
+  overflow: auto;
+}
+input.slektr-options-filter-input {
+  width: 100%;
+  margin-bottom: 12px;
+}
+.slektr-option {
+  padding: 6px 6px;
+  margin: 1px;
+}
+.slektr-option.selected {
+  background-color: red;
+  color: white;
+}
+.slektr-option.current_selection {
+  border: 1px solid red;
+  margin: none;
+}
+.slektr-option:hover {
+  cursor: pointer;
+}
+.slektr-option-group {
+  font-weight: bold;
+}
+.slektr-multiple-option {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  background-color: #ccc;
+  padding: 2px 6px;
+  margin: 0px 4px;
+}
+.slektr-multiple-option.slektr-multiple-option-label {
+  padding-right: 6px;
+}
+.slektr-multiple-option-delete,
+.slektr-single-option-delete {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  height: 24px;
+}
+svg {
+  pointer-events: none;
+}
