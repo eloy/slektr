@@ -350,13 +350,6 @@ function deleteIconElement(opt = {}) {
   svg.appendChild(path);
   return svg;
 }
-window.addEventListener("load", function() {
-  var elements = document.getElementsByClassName("slektr");
-  if (!elements)
-    return;
-  for (let el of elements) {
-    if (!el.dataset.slektr) {
-      new Slektr(el, { allowBlank: true });
-    }
-  }
-});
+export {
+  Slektr as default
+};
