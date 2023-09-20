@@ -11,18 +11,16 @@ var Slektr = class {
     this.selectOption = this.selectOption.bind(this);
     this.onMouseEnterOption = this.onMouseEnterOption.bind(this);
     this.onMouseLeaveOption = this.onMouseLeaveOption.bind(this);
-    this.unselectOptionFromMultiple = this.unselectOptionFromMultiple.bind(this);
+    this.removeValueFromMultiple = this.removeValueFromMultiple.bind(this);
     this.resetValue = this.resetValue.bind(this);
     this.filterInputChanged = this.filterInputChanged.bind(this);
+    el.style.display = "none";
+    this.setInitialValue();
     this.initOptions();
-    if (this.config.multiple) {
-      this.value = this.originalEl.value.split(",").filter((item) => item && item.length > 0);
-    } else {
-      this.value = this.originalEl.value;
-    }
     this.buildElement();
-    el.remove();
-    window.slektr = this;
+    if (!window.slektr)
+      window.slektr = {};
+    window.slektr[el.name] = this;
   }
   initOptions() {
     this.options = [];
@@ -33,20 +31,40 @@ var Slektr = class {
     if (this.config.options) {
       this.options = this.options.concat(this.config.options);
     }
-  }
-  renderValue(value) {
-    for (let el of this.fieldEl.children) {
-      el.removeEventListener("click", this.unselectOptionFromMultiple, true);
-      el.removeEventListener("click", this.resetValue, true);
-      el.remove();
+    if (this.config.initOptions) {
+      this.config.initOptions(this).then((options) => {
+        if (options && Array.isArray(options) && options.length > 0) {
+          this.options = this.options.concat(options);
+          this.renderValue(this.value);
+        }
+      });
     }
-    this.fieldEl.innerHTML = "";
-    if (this.config.multiple) {
-      this.renderMultipleValue(value);
+    if (this.config.searchOptions) {
+      this.config.remoteOptions = true;
+    }
+  }
+  setInitialValue() {
+    if (this.config.value) {
+      this.value = this.config.value;
+    } else if (this.config.multiple) {
+      this.value = this.originalEl.value.split(",").filter((item) => item && item.length > 0);
     } else {
-      this.renderSingleValue(value);
+      this.value = this.originalEl.value;
     }
   }
+  // setInitialValue() {
+  //   if (this.config.value) {
+  //     this.value = this.config.value;
+  //     return;
+  //   }
+  //   let selected_options = filterOptions(this.originalEl, o => o.selected);
+  //   if (selected_options.length === 0) return;
+  //   if (this.config.multiple) {
+  //     this.value = selected_options.map(o => o.value);
+  //   } else {
+  //     this.value = selected_options[0].value;
+  //   }
+  // }
   toggleOptions() {
     if (this.optionsDisplayed) {
       this.hideOptions();
@@ -61,17 +79,30 @@ var Slektr = class {
       return this.options;
     }
   }
+  filterLocalOptions(filter) {
+    let regexp = new RegExp(this.filter, "i");
+    this.filteredOptions = filterOptions(this.options, (o) => regexp.test(o.label));
+    this.resetOptions();
+  }
+  filterRemoteOptions(filter) {
+    if (filter.length < 2)
+      return;
+    this.config.searchOptions(filter, this).then((options) => {
+      let optionsEl = this.buildOptions(options);
+      this.optionsContainerListEl.replaceChildren(...optionsEl);
+    });
+  }
   showOptions() {
     this.buildOptionsContainer();
-    let optionsEl = this.buildOptions(this.getCurrentOptions());
-    for (let opt of optionsEl) {
-      this.optionsContainerListEl.appendChild(opt);
-    }
-    this.scrollToSelectedOption(this.value);
     this.optionsContainerListEl.addEventListener("click", this.selectOption);
     this.optionsContainerListEl.addEventListener("mouseenter", this.onMouseEnterOption, true);
     this.optionsContainerListEl.addEventListener("mouseleave", this.onMouseLeaveOption, true);
     this.optionsDisplayed = true;
+    if (this.config.remoteOptions)
+      return;
+    let optionsEl = this.buildOptions(this.getCurrentOptions());
+    this.optionsContainerListEl.replaceChildren(...optionsEl);
+    this.scrollToSelectedOption(this.value);
   }
   hideOptions() {
     this.optionsContainerListEl.removeEventListener("click", this.selectOption);
@@ -93,16 +124,22 @@ var Slektr = class {
   resetValue(e) {
     e.preventDefault();
     e.stopPropagation();
-    this.value = void 0;
-    this.renderValue(this.value);
+    if (this.config.multiple) {
+      this.value = [];
+      this.originalEl.value = "";
+    } else {
+      this.value = void 0;
+      this.originalEl.value = this.value;
+    }
+    this.onValueChanged();
   }
-  unselectOptionFromMultiple(e) {
+  removeValueFromMultiple(e) {
     e.preventDefault();
     e.stopPropagation();
     let value = e.target.slektr_value;
     let index = this.value.indexOf(value);
     this.value.splice(index, 1);
-    this.renderValue(this.value);
+    this.onValueChanged();
   }
   selectOption(e) {
     let option = e.target.slektr_option;
@@ -114,8 +151,20 @@ var Slektr = class {
     } else {
       this.value = value;
     }
-    this.renderValue(this.value);
+    if (this.config.remoteOptions) {
+      this.options.push(option);
+    }
     this.hideOptions();
+    this.onValueChanged();
+  }
+  onValueChanged() {
+    this.renderValue(this.value);
+    if (this.config.multiple) {
+      setOptionsForMultiple(this.originalEl, this.value);
+    } else {
+      this.originalEl.value = this.value;
+    }
+    this.config.onChange && this.config.onChange({ value: this.value, name: this.config.name });
   }
   isOptionSelected(value) {
     if (this.config.multiple) {
@@ -126,14 +175,30 @@ var Slektr = class {
   }
   filterInputChanged(e) {
     this.filter = e.target.value;
-    this.filteredOptions = filterOptions(this.options, new RegExp(this.filter, "i"));
-    this.resetOptions();
+    if (this.config.remoteOptions) {
+      this.filterRemoteOptions(this.filter);
+    } else {
+      this.filterLocalOptions(this.filter);
+    }
   }
   onMouseEnterOption(e) {
     e.target.className = e.target.className + " current_selection";
   }
   onMouseLeaveOption(e) {
     e.target.className = Array.from(e.target.classList).filter((c) => c != "current_selection").join(" ");
+  }
+  renderValue(value) {
+    for (let el of this.fieldEl.children) {
+      el.removeEventListener("click", this.removeValueFromMultiple, true);
+      el.removeEventListener("click", this.resetValue, true);
+      el.remove();
+    }
+    this.fieldEl.innerHTML = "";
+    if (this.config.multiple) {
+      this.renderMultipleValue(value);
+    } else {
+      this.renderSingleValue(value);
+    }
   }
   renderSingleValue(value) {
     this.fieldEl.innerHTML = "";
@@ -170,7 +235,7 @@ var Slektr = class {
       deleteButton.slektr_value = value;
       let deleteIcon = deleteIconElement();
       deleteButton.appendChild(deleteIcon);
-      deleteButton.addEventListener("click", this.unselectOptionFromMultiple, true);
+      deleteButton.addEventListener("click", this.removeValueFromMultiple, true);
       this.fieldEl.appendChild(el);
     }
   }
@@ -183,7 +248,6 @@ var Slektr = class {
   buildElement() {
     let el = document.createElement("div");
     el.className = this.originalEl.className;
-    el.id = this.originalEl.id;
     this.originalEl.after(el);
     this.slektrEl = el;
     this.buildField();
@@ -274,6 +338,12 @@ var Slektr = class {
 function buildConfigFromElement(el) {
   let config = {};
   config.multiple = el.multiple;
+  if (el.hasAttribute("value"))
+    config.value = el.getAttribute("value");
+  for (let key of Object.keys(el.dataset)) {
+    let config_key = camelize(key);
+    config[config_key] = el.dataset[key];
+  }
   return config;
 }
 function extractOptions(el) {
@@ -296,7 +366,7 @@ function getOptionLabel(value, options) {
       if (label !== void 0)
         return label;
     } else {
-      if (opt.value === value) {
+      if (opt.value == value) {
         return opt.label;
       }
     }
@@ -319,22 +389,34 @@ function findOffset(container, callback) {
   }
   return 0;
 }
-function filterOptions(options, regexp) {
+function filterOptions(options, callback) {
   let filteredOptions = [];
   for (let option of options) {
     if (option.group) {
-      let group_options = filterOptions(option.options, regexp);
+      let group_options = filterOptions(option.options, callback);
       if (group_options.length > 0) {
         let group = { group: true, label: option.label, options: group_options };
         filteredOptions.push(group);
       }
     } else {
-      if (regexp.test(option.label)) {
+      if (callback(option)) {
         filteredOptions.push(option);
       }
     }
   }
   return filteredOptions;
+}
+function setOptionsForMultiple(el, value) {
+  for (let child of el) {
+    if (el.tagName.toLowerCase() === "optgroup") {
+      setOptionsForMultiple(child, value);
+    } else {
+      child.selected = value.indexOf(child.value) !== -1;
+    }
+  }
+}
+function camelize(str) {
+  return str.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase());
 }
 var DELETE_ICON_PATH = "M36,12c13.255,0,24,10.745,24,24c0,13.255-10.745,24-24,24S12,49.255,12,36C12,22.745,22.745,12,36,12z M40.243,44.485	c1.171,1.171,3.071,1.172,4.243,0c1.172-1.172,1.171-3.071,0-4.243C44.253,40.01,42.063,37.82,40.243,36	c1.82-1.82,4.01-4.01,4.243-4.243c1.171-1.171,1.172-3.071,0-4.243c-1.171-1.171-3.071-1.171-4.243,0	C40.01,27.747,37.82,29.937,36,31.757c-1.82-1.82-4.01-4.01-4.243-4.243c-1.171-1.171-3.071-1.172-4.243,0	c-1.172,1.172-1.171,3.071,0,4.243c0.232,0.232,2.423,2.423,4.243,4.243c-1.82,1.82-4.01,4.01-4.243,4.243	c-1.171,1.171-1.171,3.071,0,4.243c1.172,1.172,3.071,1.171,4.243,0c0.232-0.232,2.423-2.423,4.243-4.243	C37.82,42.063,40.01,44.253,40.243,44.485z";
 function deleteIconElement(opt = {}) {
