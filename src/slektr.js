@@ -17,6 +17,7 @@ export default class Slektr {
     this.removeValueFromMultiple = this.removeValueFromMultiple.bind(this);
     this.resetValue = this.resetValue.bind(this);
     this.filterInputChanged = this.filterInputChanged.bind(this);
+    this.fetchFilteredRemoteOptions = this.fetchFilteredRemoteOptions.bind(this);
 
     // hide the main element
     el.style.display = 'none';
@@ -114,7 +115,16 @@ export default class Slektr {
   filterRemoteOptions(filter) {
     if (filter.length < 2) return;
 
-    this.config.searchOptions(filter, this).then(options => {
+    if (this.filterRemoteOptionsPid) {
+      clearTimeout(this.filterRemoteOptionsPid);
+    }
+
+    this.filterRemoteOptionsPid = setTimeout(this.fetchFilteredRemoteOptions, FETCH_REMOTE_OPTIONS_TIMEOUT, filter)
+  }
+
+  fetchFilteredRemoteOptions(filter) {
+    this.showFetchingRemoteOptionsLoader();
+    this.config.searchOptions(this.filter, this).then(options => {
       let optionsEl = this.buildOptions(options);
       this.optionsContainerListEl.replaceChildren(...optionsEl);
     });
@@ -123,7 +133,6 @@ export default class Slektr {
 
   showOptions() {
     this.buildOptionsContainer();
-
 
     this.optionsContainerListEl.addEventListener("click", this.selectOption);
     this.optionsContainerListEl.addEventListener("mouseenter", this.onMouseEnterOption, true);
@@ -154,6 +163,13 @@ export default class Slektr {
     this.optionsContainerListEl.remove();
     this.optionsContainerEl.remove();
     this.optionsDisplayed = false;
+  }
+
+  showFetchingRemoteOptionsLoader() {
+    let spinner = document.createElement('div');
+    spinner.className = "slektr-fetch-options-spinner";
+
+    this.optionsContainerListEl.replaceChildren(spinner);
   }
 
   resetOptions() {
@@ -198,13 +214,28 @@ export default class Slektr {
     }
 
     // If remote options is elabled, we should push the selected
-    // option to show the value
+    // option to show the value and add the option to the original el
     if (this.config.remoteOptions) {
-      this.options.push(option);
+      this.onRemoteOptionSelected(option);
     }
 
     this.hideOptions();
     this.onValueChanged();
+  }
+
+
+  onRemoteOptionSelected(option) {
+    let optionEl =  document.createElement('option');
+    optionEl.value = option.value;
+    optionEl.innerHTML = option.label;
+
+    if (this.config.multiple) {
+      this.options.push(option);
+      this.originalEl.AddChildren(optionEl);
+    } else {
+      this.options = [option];
+      this.originalEl.replaceChildren(optionEl);
+    }
   }
 
 
@@ -435,7 +466,7 @@ export default class Slektr {
   }
 }
 
-
+const FETCH_REMOTE_OPTIONS_TIMEOUT = 300;
 
 function buildElement(source_el) {
   let el = document.createElement('div');

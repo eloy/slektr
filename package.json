@@ -1,13 +1,13 @@
 {
   "name": "slektr",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Select2 replacement ",
   "main": "dist/slektr.js",
   "scripts": {
     "build": "node esbuild.mjs"
   },
   "author": "Eloy Gomez",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "esbuild": "0.19.2",
     "esbuild-sass-plugin": "^2.15.0"
