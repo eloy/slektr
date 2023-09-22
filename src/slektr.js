@@ -18,6 +18,7 @@ export default class Slektr {
     this.resetValue = this.resetValue.bind(this);
     this.filterInputChanged = this.filterInputChanged.bind(this);
     this.fetchFilteredRemoteOptions = this.fetchFilteredRemoteOptions.bind(this);
+    this.onClickOutside = this.onClickOutside.bind(this);
 
     // hide the main element
     el.style.display = 'none';
@@ -65,12 +66,17 @@ export default class Slektr {
   }
 
   setInitialValue() {
+    let value;
     if (this.config.value) {
       this.value = this.config.value;
-    } else if (this.config.multiple) {
-      this.value = this.originalEl.value.split(',').filter(item => item && item.length > 0);
+    } else if (this.originalEl.hasAttribute('value')) {
+      value = this.originalEl.getAttribute('value');
+      if (this.config.multiple) {
+        value = value.split(',').filter(item => item && item.length > 0);
+      }
+      this.value = value;
     } else {
-      this.value = this.originalEl.value;
+      this.value = this.config.multiple ? [] : '';
     }
   }
 
@@ -90,7 +96,9 @@ export default class Slektr {
   //   }
   // }
 
-  toggleOptions() {
+  toggleOptions(e) {
+    if (e.target.tagName.toUpperCase() === 'A') return;
+
     if (this.optionsDisplayed) {
       this.hideOptions();
     } else {
@@ -133,7 +141,7 @@ export default class Slektr {
 
   showOptions() {
     this.buildOptionsContainer();
-
+    window.addEventListener('click', this.onClickOutside);
     this.optionsContainerListEl.addEventListener("click", this.selectOption);
     this.optionsContainerListEl.addEventListener("mouseenter", this.onMouseEnterOption, true);
     this.optionsContainerListEl.addEventListener("mouseleave", this.onMouseLeaveOption, true);
@@ -150,6 +158,7 @@ export default class Slektr {
   }
 
   hideOptions() {
+    window.removeEventListener('click', this.onClickOutside);
     this.optionsContainerListEl.removeEventListener("click", this.selectOption);
     this.optionsContainerListEl.removeEventListener("mouseenter", this.onMouseEnterOption, true);
     this.optionsContainerListEl.removeEventListener("mouseleave", this.onMouseLeaveOption, true);
@@ -163,6 +172,13 @@ export default class Slektr {
     this.optionsContainerListEl.remove();
     this.optionsContainerEl.remove();
     this.optionsDisplayed = false;
+  }
+
+
+  onClickOutside(e) {
+    if (!this.slektrEl.contains(e.target)) {
+      this.hideOptions();
+    }
   }
 
   showFetchingRemoteOptionsLoader() {
@@ -231,7 +247,7 @@ export default class Slektr {
 
     if (this.config.multiple) {
       this.options.push(option);
-      this.originalEl.AddChildren(optionEl);
+      this.originalEl.appendChild(optionEl);
     } else {
       this.options = [option];
       this.originalEl.replaceChildren(optionEl);
@@ -297,6 +313,20 @@ export default class Slektr {
   }
 
 
+  renderValueContent(el, option) {
+    if (!option) return;
+    if (this.config.renderValue) {
+      let valueEl = this.config.renderValue(option, this);
+      if (typeof(valueEl) === 'string') {
+        el.setHTML(valueEl);
+      } else {
+        el.append(valueEl);
+      }
+    } else {
+      el.setHTML(option.label);
+    }
+  }
+
   renderSingleValue(value) {
     this.fieldEl.innerHTML = '';
     if (!value || value.length === 0) {
@@ -307,9 +337,8 @@ export default class Slektr {
     let el = document.createElement('div');
     el.className = "slektr-single-value";
 
-    let label = getOptionLabel(value, this.options);
-    el.setHTML(label);
-
+    let option = findOption(value, this.options);
+    this.renderValueContent(el, option);
     this.fieldEl.append(el);
 
     if (this.config.allowBlank) {
@@ -325,16 +354,21 @@ export default class Slektr {
   }
 
   renderMultipleValue(values) {
+    if (!values || values.length === 0) {
+      this.renderPrompt();
+      return;
+    }
+
     for (let value of values) {
-      let label = getOptionLabel(value, this.options);
       let el = document.createElement('div');
       el.className = "slektr-multiple-option";
 
-      let spam = document.createElement('spam');
-      spam.className = 'slektr-multiple-option-label';
-      spam.setHTML(label);
+      let badge = document.createElement('div');
+      badge.className = 'slektr-multiple-option-label';
 
-      el.appendChild(spam);
+      let option = findOption(value, this.options);
+      this.renderValueContent(badge, option);
+      el.appendChild(badge);
 
       let deleteButton = document.createElement('button');
       deleteButton.className = 'slektr-multiple-option-delete';
@@ -476,7 +510,6 @@ function buildElement(source_el) {
 function buildConfigFromElement(el) {
   let config = {};
   config.multiple = el.multiple;
-  if (el.hasAttribute('value')) config.value = el.getAttribute('value');
 
   for (let key of Object.keys(el.dataset)) {
     let config_key = camelize(key);
@@ -502,15 +535,15 @@ function extractOptions(el) {
 }
 
 
-function getOptionLabel(value, options) {
+function findOption(value, options) {
   for (let opt of options) {
     if (opt.group) {
-      let label = getOptionLabel(value, opt.options);
-      if (label !== undefined) return label;
+      let option =findOption(value, opt.options);
+      if (option !== undefined) return option;
     } else {
       // We use == to compare integers and strings
       if (opt.value == value) {
-        return opt.label;
+        return opt;
       }
     }
   }

@@ -14,6 +14,8 @@ var Slektr = class {
     this.removeValueFromMultiple = this.removeValueFromMultiple.bind(this);
     this.resetValue = this.resetValue.bind(this);
     this.filterInputChanged = this.filterInputChanged.bind(this);
+    this.fetchFilteredRemoteOptions = this.fetchFilteredRemoteOptions.bind(this);
+    this.onClickOutside = this.onClickOutside.bind(this);
     el.style.display = "none";
     this.setInitialValue();
     this.initOptions();
@@ -44,12 +46,17 @@ var Slektr = class {
     }
   }
   setInitialValue() {
+    let value;
     if (this.config.value) {
       this.value = this.config.value;
-    } else if (this.config.multiple) {
-      this.value = this.originalEl.value.split(",").filter((item) => item && item.length > 0);
+    } else if (this.originalEl.hasAttribute("value")) {
+      value = this.originalEl.getAttribute("value");
+      if (this.config.multiple) {
+        value = value.split(",").filter((item) => item && item.length > 0);
+      }
+      this.value = value;
     } else {
-      this.value = this.originalEl.value;
+      this.value = this.config.multiple ? [] : "";
     }
   }
   // setInitialValue() {
@@ -65,7 +72,9 @@ var Slektr = class {
   //     this.value = selected_options[0].value;
   //   }
   // }
-  toggleOptions() {
+  toggleOptions(e) {
+    if (e.target.tagName.toUpperCase() === "A")
+      return;
     if (this.optionsDisplayed) {
       this.hideOptions();
     } else {
@@ -87,13 +96,21 @@ var Slektr = class {
   filterRemoteOptions(filter) {
     if (filter.length < 2)
       return;
-    this.config.searchOptions(filter, this).then((options) => {
+    if (this.filterRemoteOptionsPid) {
+      clearTimeout(this.filterRemoteOptionsPid);
+    }
+    this.filterRemoteOptionsPid = setTimeout(this.fetchFilteredRemoteOptions, FETCH_REMOTE_OPTIONS_TIMEOUT, filter);
+  }
+  fetchFilteredRemoteOptions(filter) {
+    this.showFetchingRemoteOptionsLoader();
+    this.config.searchOptions(this.filter, this).then((options) => {
       let optionsEl = this.buildOptions(options);
       this.optionsContainerListEl.replaceChildren(...optionsEl);
     });
   }
   showOptions() {
     this.buildOptionsContainer();
+    window.addEventListener("click", this.onClickOutside);
     this.optionsContainerListEl.addEventListener("click", this.selectOption);
     this.optionsContainerListEl.addEventListener("mouseenter", this.onMouseEnterOption, true);
     this.optionsContainerListEl.addEventListener("mouseleave", this.onMouseLeaveOption, true);
@@ -105,6 +122,7 @@ var Slektr = class {
     this.scrollToSelectedOption(this.value);
   }
   hideOptions() {
+    window.removeEventListener("click", this.onClickOutside);
     this.optionsContainerListEl.removeEventListener("click", this.selectOption);
     this.optionsContainerListEl.removeEventListener("mouseenter", this.onMouseEnterOption, true);
     this.optionsContainerListEl.removeEventListener("mouseleave", this.onMouseLeaveOption, true);
@@ -116,6 +134,16 @@ var Slektr = class {
     this.optionsContainerListEl.remove();
     this.optionsContainerEl.remove();
     this.optionsDisplayed = false;
+  }
+  onClickOutside(e) {
+    if (!this.slektrEl.contains(e.target)) {
+      this.hideOptions();
+    }
+  }
+  showFetchingRemoteOptionsLoader() {
+    let spinner = document.createElement("div");
+    spinner.className = "slektr-fetch-options-spinner";
+    this.optionsContainerListEl.replaceChildren(spinner);
   }
   resetOptions() {
     let optionsEl = this.buildOptions(this.getCurrentOptions());
@@ -152,10 +180,22 @@ var Slektr = class {
       this.value = value;
     }
     if (this.config.remoteOptions) {
-      this.options.push(option);
+      this.onRemoteOptionSelected(option);
     }
     this.hideOptions();
     this.onValueChanged();
+  }
+  onRemoteOptionSelected(option) {
+    let optionEl = document.createElement("option");
+    optionEl.value = option.value;
+    optionEl.innerHTML = option.label;
+    if (this.config.multiple) {
+      this.options.push(option);
+      this.originalEl.appendChild(optionEl);
+    } else {
+      this.options = [option];
+      this.originalEl.replaceChildren(optionEl);
+    }
   }
   onValueChanged() {
     this.renderValue(this.value);
@@ -200,6 +240,20 @@ var Slektr = class {
       this.renderSingleValue(value);
     }
   }
+  renderValueContent(el, option) {
+    if (!option)
+      return;
+    if (this.config.renderValue) {
+      let valueEl = this.config.renderValue(option, this);
+      if (typeof valueEl === "string") {
+        el.setHTML(valueEl);
+      } else {
+        el.append(valueEl);
+      }
+    } else {
+      el.setHTML(option.label);
+    }
+  }
   renderSingleValue(value) {
     this.fieldEl.innerHTML = "";
     if (!value || value.length === 0) {
@@ -208,8 +262,8 @@ var Slektr = class {
     }
     let el = document.createElement("div");
     el.className = "slektr-single-value";
-    let label = getOptionLabel(value, this.options);
-    el.setHTML(label);
+    let option = findOption(value, this.options);
+    this.renderValueContent(el, option);
     this.fieldEl.append(el);
     if (this.config.allowBlank) {
       let deleteButton = document.createElement("button");
@@ -221,14 +275,18 @@ var Slektr = class {
     }
   }
   renderMultipleValue(values) {
+    if (!values || values.length === 0) {
+      this.renderPrompt();
+      return;
+    }
     for (let value of values) {
-      let label = getOptionLabel(value, this.options);
       let el = document.createElement("div");
       el.className = "slektr-multiple-option";
-      let spam = document.createElement("spam");
-      spam.className = "slektr-multiple-option-label";
-      spam.setHTML(label);
-      el.appendChild(spam);
+      let badge = document.createElement("div");
+      badge.className = "slektr-multiple-option-label";
+      let option = findOption(value, this.options);
+      this.renderValueContent(badge, option);
+      el.appendChild(badge);
       let deleteButton = document.createElement("button");
       deleteButton.className = "slektr-multiple-option-delete";
       el.appendChild(deleteButton);
@@ -335,11 +393,10 @@ var Slektr = class {
     return optionsEl;
   }
 };
+var FETCH_REMOTE_OPTIONS_TIMEOUT = 300;
 function buildConfigFromElement(el) {
   let config = {};
   config.multiple = el.multiple;
-  if (el.hasAttribute("value"))
-    config.value = el.getAttribute("value");
   for (let key of Object.keys(el.dataset)) {
     let config_key = camelize(key);
     config[config_key] = el.dataset[key];
@@ -359,15 +416,15 @@ function extractOptions(el) {
   }
   return options;
 }
-function getOptionLabel(value, options) {
+function findOption(value, options) {
   for (let opt of options) {
     if (opt.group) {
-      let label = getOptionLabel(value, opt.options);
-      if (label !== void 0)
-        return label;
+      let option = findOption(value, opt.options);
+      if (option !== void 0)
+        return option;
     } else {
       if (opt.value == value) {
-        return opt.label;
+        return opt;
       }
     }
   }

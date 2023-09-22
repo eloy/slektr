@@ -4,4 +4,7 @@
 ### value
 ### onChange
 ### options
+
 ### initOptions
+### searchOptions
+### renderValue
