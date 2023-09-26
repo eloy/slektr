@@ -1,10 +1,11 @@
-## Options
+# Slektr
+## Config Options
 ### allowBlank
 ### multiple
 ### value
-### onChange
 ### options
 
-### initOptions
-### searchOptions
-### renderValue
+### onChangeCallback
+### initOptionsCallback
+### searchOptionsCallback
+### renderValueCallback

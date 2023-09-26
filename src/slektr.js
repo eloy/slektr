@@ -51,8 +51,8 @@ export default class Slektr {
     }
 
     // Run the callback to get the initial options
-    if (this.config.initOptions) {
-      this.config.initOptions(this).then(options => {
+    if (this.config.initOptionsCallback) {
+      this.config.initOptionsCallback(this).then(options => {
         if (options && Array.isArray(options) && options.length > 0) {
           this.options = this.options.concat(options);
           this.renderValue(this.value);
@@ -60,7 +60,7 @@ export default class Slektr {
       });
     }
 
-    if (this.config.searchOptions) {
+    if (this.config.searchOptionsCallback) {
       this.config.remoteOptions = true;
     }
   }
@@ -132,7 +132,7 @@ export default class Slektr {
 
   fetchFilteredRemoteOptions(filter) {
     this.showFetchingRemoteOptionsLoader();
-    this.config.searchOptions(this.filter, this).then(options => {
+    this.config.searchOptionsCallback(this.filter, this).then(options => {
       let optionsEl = this.buildOptions(options);
       this.optionsContainerListEl.replaceChildren(...optionsEl);
     });
@@ -265,7 +265,7 @@ export default class Slektr {
     }
 
     // Run the callback
-    this.config.onChange && this.config.onChange({value: this.value, name: this.config.name});
+    this.config.onChangeCallback && this.config.onChangeCallback({value: this.value, name: this.config.name});
   }
 
   isOptionSelected(value) {
@@ -315,8 +315,8 @@ export default class Slektr {
 
   renderValueContent(el, option) {
     if (!option) return;
-    if (this.config.renderValue) {
-      let valueEl = this.config.renderValue(option, this);
+    if (this.config.renderValueCallback) {
+      let valueEl = this.config.renderValueCallback(option, this);
       if (typeof(valueEl) === 'string') {
         el.setHTML(valueEl);
       } else {
