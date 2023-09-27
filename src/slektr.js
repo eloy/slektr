@@ -11,14 +11,15 @@ export default class Slektr {
     this.originalEl = el;
 
     this.toggleOptions = this.toggleOptions.bind(this);
-    this.selectOption = this.selectOption.bind(this);
+    this.onClickOnOption = this.onClickOnOption.bind(this);
     this.onMouseEnterOption = this.onMouseEnterOption.bind(this);
-    this.onMouseLeaveOption = this.onMouseLeaveOption.bind(this);
+
     this.removeValueFromMultiple = this.removeValueFromMultiple.bind(this);
     this.resetValue = this.resetValue.bind(this);
     this.filterInputChanged = this.filterInputChanged.bind(this);
     this.fetchFilteredRemoteOptions = this.fetchFilteredRemoteOptions.bind(this);
     this.onClickOutside = this.onClickOutside.bind(this);
+    this.onKeyPress = this.onKeyPress.bind(this);
 
     // hide the main element
     el.style.display = 'none';
@@ -142,9 +143,10 @@ export default class Slektr {
   showOptions() {
     this.buildOptionsContainer();
     window.addEventListener('click', this.onClickOutside);
-    this.optionsContainerListEl.addEventListener("click", this.selectOption);
+    this.optionsContainerListEl.addEventListener("click", this.onClickOnOption);
     this.optionsContainerListEl.addEventListener("mouseenter", this.onMouseEnterOption, true);
-    this.optionsContainerListEl.addEventListener("mouseleave", this.onMouseLeaveOption, true);
+
+    window.addEventListener('keydown', this.onKeyPress, true);
     this.optionsDisplayed = true;
 
     // Don't show local options if remote options enabled;
@@ -159,15 +161,18 @@ export default class Slektr {
 
   hideOptions() {
     window.removeEventListener('click', this.onClickOutside);
-    this.optionsContainerListEl.removeEventListener("click", this.selectOption);
+    this.optionsContainerListEl.removeEventListener("click", this.onClickOnOption);
     this.optionsContainerListEl.removeEventListener("mouseenter", this.onMouseEnterOption, true);
-    this.optionsContainerListEl.removeEventListener("mouseleave", this.onMouseLeaveOption, true);
+
+    window.removeEventListener('keydown', this.onKeyPress, true);
+
     if (this.filterInput) {
       this.filterInput.addEventListener('input', this.filterInputChanged);
     }
 
     this.filter = undefined;
     this.filteredOptions = undefined;
+    this.currentSelection = undefined;
 
     this.optionsContainerListEl.remove();
     this.optionsContainerEl.remove();
@@ -178,6 +183,67 @@ export default class Slektr {
   onClickOutside(e) {
     if (!this.slektrEl.contains(e.target)) {
       this.hideOptions();
+    }
+  }
+
+  onKeyPress(e) {
+    if (e.keyCode === KEY_ARROW_UP) {
+      this.selectPrevOption();
+    } else if (e.keyCode === KEY_ARROW_DOWN) {
+      this.selectNextOption();
+    } else if (e.keyCode === KEY_ENTER && this.currentSelection) {
+      e.preventDefault();
+      this.selectOption(this.currentSelection.slektr_option);
+    }
+  }
+
+  onMouseEnterOption(e) {
+    // Ignore Groups
+    if (e.target.slektrGroup) return;
+
+    // Remove the current_selection class from the last selection, if any
+    if (this.currentSelection) {
+      this.currentSelection.className = Array.from(this.currentSelection.classList).filter(c => c != 'current_selection').join(' ');
+    }
+
+    this.currentSelection = e.target;
+    this.currentSelection.className = this.currentSelection.className + ' current_selection';
+  }
+
+  selectNextOption() {
+    this.selectCurrentSelection(1);
+  }
+
+  selectPrevOption() {
+    this.selectCurrentSelection(-1);
+  }
+
+
+  selectCurrentSelection(offset) {
+    let index = 0;
+    let validOptions = Array.from(this.optionsContainerListEl.children).filter(o => !o.slektrGroup);
+
+    if (this.currentSelection) {
+      index = validOptions.findIndex(o => o.slektr_option.value === this.currentSelection.slektr_option.value)
+      index = index + offset;
+      if (index < 0 || index == validOptions.length) return;
+
+      this.currentSelection.className = Array.from(this.currentSelection.classList).filter(c => c != 'current_selection').join(' ');
+    }
+
+    this.currentSelection = validOptions[index]
+    this.currentSelection.className = this.currentSelection.className + ' current_selection';
+
+
+    // Scroll to the option
+    let elOffset = findOffset(this.optionsContainerListEl, el => el.slektr_option && el.slektr_option.value === this.currentSelection.slektr_option.value);
+    let elHeight = this.currentSelection.clientHeight;
+    let elementHeight = this.optionsContainerListEl.clientHeight;
+    let currentOffset = this.optionsContainerListEl.offsetTop;
+
+    if ((elOffset + elementHeight) > (elHeight + currentOffset)) {
+      let yPosition = (elOffset + elHeight) - elHeight;
+      this.optionsContainerListEl.scrollTo(0, yPosition);
     }
   }
 
@@ -216,10 +282,12 @@ export default class Slektr {
     this.onValueChanged();
   }
 
-
-  selectOption(e) {
+  onClickOnOption(e) {
     let option = e.target.slektr_option;
+    this.onClickOnOption(option);
+  }
 
+  selectOption(option) {
     let value = option.hasOwnProperty('value') ? option.value : option.label;
     if (this.config.multiple) {
       if (this.value.indexOf(value) === -1) {
@@ -232,7 +300,7 @@ export default class Slektr {
     // If remote options is elabled, we should push the selected
     // option to show the value and add the option to the original el
     if (this.config.remoteOptions) {
-      this.onRemoteOptionSelected(option);
+      this.selectRemoteOption(option);
     }
 
     this.hideOptions();
@@ -240,7 +308,7 @@ export default class Slektr {
   }
 
 
-  onRemoteOptionSelected(option) {
+  selectRemoteOption(option) {
     let optionEl =  document.createElement('option');
     optionEl.value = option.value;
     optionEl.innerHTML = option.label;
@@ -284,15 +352,6 @@ export default class Slektr {
     } else {
        this.filterLocalOptions(this.filter)
     }
-  }
-
-
-  onMouseEnterOption(e) {
-    e.target.className = e.target.className + ' current_selection';
-  }
-
-  onMouseLeaveOption(e) {
-    e.target.className = Array.from(e.target.classList).filter(c => c != 'current_selection').join(' ');
   }
 
   renderValue(value) {
@@ -461,6 +520,8 @@ export default class Slektr {
     let el = document.createElement('div');
     el.dataset.level = level;
     el.className = 'slektr-option-group';
+    el.slektrGroup = group;
+
     el.style.paddingLeft = level * 10 + 'px';
     el.appendChild(document.createTextNode(group.label));
 
@@ -484,6 +545,7 @@ export default class Slektr {
     el.className = classList.join(' ');
     el.appendChild(document.createTextNode(option.label));
     el.slektr_option = option;
+
     return el;
   }
 
@@ -501,6 +563,9 @@ export default class Slektr {
 }
 
 const FETCH_REMOTE_OPTIONS_TIMEOUT = 300;
+const KEY_ARROW_DOWN = 40;
+const KEY_ARROW_UP = 38;
+const KEY_ENTER = 13;
 
 function buildElement(source_el) {
   let el = document.createElement('div');
