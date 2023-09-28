@@ -284,7 +284,7 @@ export default class Slektr {
 
   onClickOnOption(e) {
     let option = e.target.slektr_option;
-    this.onClickOnOption(option);
+    this.selectOption(option);
   }
 
   selectOption(option) {

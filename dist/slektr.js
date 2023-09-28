@@ -218,7 +218,7 @@ var Slektr = class {
   }
   onClickOnOption(e) {
     let option = e.target.slektr_option;
-    this.onClickOnOption(option);
+    this.selectOption(option);
   }
   selectOption(option) {
     let value = option.hasOwnProperty("value") ? option.value : option.label;
