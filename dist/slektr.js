@@ -8,14 +8,14 @@ var Slektr = class {
     el.dataset.slektr = true;
     this.originalEl = el;
     this.toggleOptions = this.toggleOptions.bind(this);
-    this.selectOption = this.selectOption.bind(this);
+    this.onClickOnOption = this.onClickOnOption.bind(this);
     this.onMouseEnterOption = this.onMouseEnterOption.bind(this);
-    this.onMouseLeaveOption = this.onMouseLeaveOption.bind(this);
     this.removeValueFromMultiple = this.removeValueFromMultiple.bind(this);
     this.resetValue = this.resetValue.bind(this);
     this.filterInputChanged = this.filterInputChanged.bind(this);
     this.fetchFilteredRemoteOptions = this.fetchFilteredRemoteOptions.bind(this);
     this.onClickOutside = this.onClickOutside.bind(this);
+    this.onKeyPress = this.onKeyPress.bind(this);
     el.style.display = "none";
     this.setInitialValue();
     this.initOptions();
@@ -33,15 +33,15 @@ var Slektr = class {
     if (this.config.options) {
       this.options = this.options.concat(this.config.options);
     }
-    if (this.config.initOptions) {
-      this.config.initOptions(this).then((options) => {
+    if (this.config.initOptionsCallback) {
+      this.config.initOptionsCallback(this).then((options) => {
         if (options && Array.isArray(options) && options.length > 0) {
           this.options = this.options.concat(options);
           this.renderValue(this.value);
         }
       });
     }
-    if (this.config.searchOptions) {
+    if (this.config.searchOptionsCallback) {
       this.config.remoteOptions = true;
     }
   }
@@ -103,7 +103,7 @@ var Slektr = class {
   }
   fetchFilteredRemoteOptions(filter) {
     this.showFetchingRemoteOptionsLoader();
-    this.config.searchOptions(this.filter, this).then((options) => {
+    this.config.searchOptionsCallback(this.filter, this).then((options) => {
       let optionsEl = this.buildOptions(options);
       this.optionsContainerListEl.replaceChildren(...optionsEl);
     });
@@ -111,9 +111,9 @@ var Slektr = class {
   showOptions() {
     this.buildOptionsContainer();
     window.addEventListener("click", this.onClickOutside);
-    this.optionsContainerListEl.addEventListener("click", this.selectOption);
+    this.optionsContainerListEl.addEventListener("click", this.onClickOnOption);
     this.optionsContainerListEl.addEventListener("mouseenter", this.onMouseEnterOption, true);
-    this.optionsContainerListEl.addEventListener("mouseleave", this.onMouseLeaveOption, true);
+    window.addEventListener("keydown", this.onKeyPress, true);
     this.optionsDisplayed = true;
     if (this.config.remoteOptions)
       return;
@@ -123,14 +123,15 @@ var Slektr = class {
   }
   hideOptions() {
     window.removeEventListener("click", this.onClickOutside);
-    this.optionsContainerListEl.removeEventListener("click", this.selectOption);
+    this.optionsContainerListEl.removeEventListener("click", this.onClickOnOption);
     this.optionsContainerListEl.removeEventListener("mouseenter", this.onMouseEnterOption, true);
-    this.optionsContainerListEl.removeEventListener("mouseleave", this.onMouseLeaveOption, true);
+    window.removeEventListener("keydown", this.onKeyPress, true);
     if (this.filterInput) {
       this.filterInput.addEventListener("input", this.filterInputChanged);
     }
     this.filter = void 0;
     this.filteredOptions = void 0;
+    this.currentSelection = void 0;
     this.optionsContainerListEl.remove();
     this.optionsContainerEl.remove();
     this.optionsDisplayed = false;
@@ -138,6 +139,52 @@ var Slektr = class {
   onClickOutside(e) {
     if (!this.slektrEl.contains(e.target)) {
       this.hideOptions();
+    }
+  }
+  onKeyPress(e) {
+    if (e.keyCode === KEY_ARROW_UP) {
+      this.selectPrevOption();
+    } else if (e.keyCode === KEY_ARROW_DOWN) {
+      this.selectNextOption();
+    } else if (e.keyCode === KEY_ENTER && this.currentSelection) {
+      e.preventDefault();
+      this.selectOption(this.currentSelection.slektr_option);
+    }
+  }
+  onMouseEnterOption(e) {
+    if (e.target.slektrGroup)
+      return;
+    if (this.currentSelection) {
+      this.currentSelection.className = Array.from(this.currentSelection.classList).filter((c) => c != "current_selection").join(" ");
+    }
+    this.currentSelection = e.target;
+    this.currentSelection.className = this.currentSelection.className + " current_selection";
+  }
+  selectNextOption() {
+    this.selectCurrentSelection(1);
+  }
+  selectPrevOption() {
+    this.selectCurrentSelection(-1);
+  }
+  selectCurrentSelection(offset) {
+    let index = 0;
+    let validOptions = Array.from(this.optionsContainerListEl.children).filter((o) => !o.slektrGroup);
+    if (this.currentSelection) {
+      index = validOptions.findIndex((o) => o.slektr_option.value === this.currentSelection.slektr_option.value);
+      index = index + offset;
+      if (index < 0 || index == validOptions.length)
+        return;
+      this.currentSelection.className = Array.from(this.currentSelection.classList).filter((c) => c != "current_selection").join(" ");
+    }
+    this.currentSelection = validOptions[index];
+    this.currentSelection.className = this.currentSelection.className + " current_selection";
+    let elOffset = findOffset(this.optionsContainerListEl, (el) => el.slektr_option && el.slektr_option.value === this.currentSelection.slektr_option.value);
+    let elHeight = this.currentSelection.clientHeight;
+    let elementHeight = this.optionsContainerListEl.clientHeight;
+    let currentOffset = this.optionsContainerListEl.offsetTop;
+    if (elOffset + elementHeight > elHeight + currentOffset) {
+      let yPosition = elOffset + elHeight - elHeight;
+      this.optionsContainerListEl.scrollTo(0, yPosition);
     }
   }
   showFetchingRemoteOptionsLoader() {
@@ -169,8 +216,11 @@ var Slektr = class {
     this.value.splice(index, 1);
     this.onValueChanged();
   }
-  selectOption(e) {
+  onClickOnOption(e) {
     let option = e.target.slektr_option;
+    this.onClickOnOption(option);
+  }
+  selectOption(option) {
     let value = option.hasOwnProperty("value") ? option.value : option.label;
     if (this.config.multiple) {
       if (this.value.indexOf(value) === -1) {
@@ -180,12 +230,12 @@ var Slektr = class {
       this.value = value;
     }
     if (this.config.remoteOptions) {
-      this.onRemoteOptionSelected(option);
+      this.selectRemoteOption(option);
     }
     this.hideOptions();
     this.onValueChanged();
   }
-  onRemoteOptionSelected(option) {
+  selectRemoteOption(option) {
     let optionEl = document.createElement("option");
     optionEl.value = option.value;
     optionEl.innerHTML = option.label;
@@ -204,7 +254,7 @@ var Slektr = class {
     } else {
       this.originalEl.value = this.value;
     }
-    this.config.onChange && this.config.onChange({ value: this.value, name: this.config.name });
+    this.config.onChangeCallback && this.config.onChangeCallback({ value: this.value, name: this.config.name });
   }
   isOptionSelected(value) {
     if (this.config.multiple) {
@@ -220,12 +270,6 @@ var Slektr = class {
     } else {
       this.filterLocalOptions(this.filter);
     }
-  }
-  onMouseEnterOption(e) {
-    e.target.className = e.target.className + " current_selection";
-  }
-  onMouseLeaveOption(e) {
-    e.target.className = Array.from(e.target.classList).filter((c) => c != "current_selection").join(" ");
   }
   renderValue(value) {
     for (let el of this.fieldEl.children) {
@@ -243,8 +287,8 @@ var Slektr = class {
   renderValueContent(el, option) {
     if (!option)
       return;
-    if (this.config.renderValue) {
-      let valueEl = this.config.renderValue(option, this);
+    if (this.config.renderValueCallback) {
+      let valueEl = this.config.renderValueCallback(option, this);
       if (typeof valueEl === "string") {
         el.setHTML(valueEl);
       } else {
@@ -361,6 +405,7 @@ var Slektr = class {
     let el = document.createElement("div");
     el.dataset.level = level;
     el.className = "slektr-option-group";
+    el.slektrGroup = group;
     el.style.paddingLeft = level * 10 + "px";
     el.appendChild(document.createTextNode(group.label));
     let groupOptions = this.buildOptions(group.options, level + 1);
@@ -394,6 +439,9 @@ var Slektr = class {
   }
 };
 var FETCH_REMOTE_OPTIONS_TIMEOUT = 300;
+var KEY_ARROW_DOWN = 40;
+var KEY_ARROW_UP = 38;
+var KEY_ENTER = 13;
 function buildConfigFromElement(el) {
   let config = {};
   config.multiple = el.multiple;
