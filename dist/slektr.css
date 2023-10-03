@@ -16,6 +16,7 @@
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+  align-items: center;
 }
 .slektr .slektr-options-container {
   position: absolute;
@@ -34,8 +35,10 @@
   margin-bottom: 12px;
 }
 .slektr .slektr-option {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  margin: 1px 6px 1px 0;
   padding: 6px 6px;
-  margin: 1px;
 }
 .slektr .slektr-option.selected {
   background-color: red;
