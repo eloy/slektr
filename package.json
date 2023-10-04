@@ -1,6 +1,6 @@
 {
   "name": "slektr",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "Select2 replacement ",
   "main": "dist/slektr.js",
   "scripts": {
