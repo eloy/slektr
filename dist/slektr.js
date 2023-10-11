@@ -349,7 +349,7 @@ var Slektr = class {
   }
   buildElement() {
     let el = document.createElement("div");
-    el.className = ["slektr"].concat(Array.from(this.this.originalEl.classList)).unique().join(" ");
+    el.className = ["slektr"].concat(Array.from(this.originalEl.classList)).unique().join(" ");
     this.originalEl.after(el);
     this.slektrEl = el;
     this.buildField();
