@@ -51,19 +51,23 @@ export default class Slektr {
       this.options = this.options.concat(this.config.options);
     }
 
-    // Run the callback to get the initial options
-    if (this.config.initOptionsCallback) {
-      this.config.initOptionsCallback(this).then(options => {
-        if (options && Array.isArray(options) && options.length > 0) {
-          this.options = this.options.concat(options);
-          this.renderValue(this.value);
-        }
-      });
-    }
+    this.initRemoteOptions();
 
     if (this.config.searchOptionsCallback) {
       this.config.remoteOptions = true;
     }
+  }
+
+
+  initRemoteOptions() {
+    // Run the callback to get the initial options
+    if (!this.config.initOptionsCallback) return;
+    this.config.initOptionsCallback(this).then(options => {
+      if (options && Array.isArray(options) && options.length > 0) {
+        this.options = this.options.concat(options);
+        this.renderValue(this.value);
+      }
+    });
   }
 
   setInitialValue() {
@@ -323,7 +327,7 @@ export default class Slektr {
   }
 
 
-  onValueChanged() {
+  onValueChanged(ignoreCallback=false) {
     this.renderValue(this.value);
 
     if (this.config.multiple) {
@@ -333,8 +337,21 @@ export default class Slektr {
     }
 
     // Run the callback
-    this.config.onChangeCallback && this.config.onChangeCallback({value: this.value, name: this.config.name});
+    if (!ignoreCallback) {
+      this.config.onChangeCallback && this.config.onChangeCallback({value: this.value, name: this.config.name});
+    }
   }
+
+  /**
+   * Set the new value
+   */
+  setValue(value) {
+    this.value = value;
+    this.initRemoteOptions();
+    this.onValueChanged();
+  }
+
+
 
   isOptionSelected(value) {
     if (this.config.multiple) {
@@ -445,7 +462,8 @@ export default class Slektr {
   renderPrompt() {
     let spam = document.createElement('spam');
     spam.className = 'slektr-propmt';
-    spam.setHTML("Select an option");
+    let placeholder = this.config.placeholder || "Select option"
+    spam.setHTML(placeholder);
     this.fieldEl.appendChild(spam);
   }
 
