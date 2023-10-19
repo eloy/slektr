@@ -51,30 +51,25 @@ var Slektr = class {
   setInitialValue() {
     let value;
     if (this.config.value) {
-      this.value = this.config.value;
-    } else if (this.originalEl.hasAttribute("value")) {
+      return this.value = this.config.value;
+    }
+    if (this.originalEl.hasAttribute("value")) {
       value = this.originalEl.getAttribute("value");
       if (this.config.multiple) {
         value = value.split(",").filter((item) => item && item.length > 0);
       }
-      this.value = value;
-    } else {
-      this.value = this.config.multiple ? [] : "";
+      return this.value = value;
     }
+    let selected_options = filterOptions(this.originalEl, (o) => o.selected);
+    if (selected_options.length > 0) {
+      if (this.config.multiple) {
+        return this.value = selected_options.map((o) => o.value);
+      } else {
+        return this.value = selected_options[0].value;
+      }
+    }
+    return this.value = this.config.multiple ? [] : "";
   }
-  // setInitialValue() {
-  //   if (this.config.value) {
-  //     this.value = this.config.value;
-  //     return;
-  //   }
-  //   let selected_options = filterOptions(this.originalEl, o => o.selected);
-  //   if (selected_options.length === 0) return;
-  //   if (this.config.multiple) {
-  //     this.value = selected_options.map(o => o.value);
-  //   } else {
-  //     this.value = selected_options[0].value;
-  //   }
-  // }
   toggleOptions(e) {
     if (e.target.tagName.toUpperCase() === "A")
       return;
@@ -526,15 +521,19 @@ function filterOptions(options, callback) {
   return filteredOptions;
 }
 function setOptionsForMultiple(el, value) {
+  console.log("setting value");
   for (let child of el) {
     if (el.tagName.toLowerCase() === "optgroup") {
       setOptionsForMultiple(child, value);
     } else {
-      child.selected = value.indexOf(child.value) !== -1;
+      child.selected = value.findIndex((v) => v == child.value) !== -1;
+      console.log("checking", child, value);
     }
   }
 }
 function camelize(str) {
+  if (!str.includes("_"))
+    return str;
   return str.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase());
 }
 var DELETE_ICON_PATH = "M36,12c13.255,0,24,10.745,24,24c0,13.255-10.745,24-24,24S12,49.255,12,36C12,22.745,22.745,12,36,12z M40.243,44.485	c1.171,1.171,3.071,1.172,4.243,0c1.172-1.172,1.171-3.071,0-4.243C44.253,40.01,42.063,37.82,40.243,36	c1.82-1.82,4.01-4.01,4.243-4.243c1.171-1.171,1.172-3.071,0-4.243c-1.171-1.171-3.071-1.171-4.243,0	C40.01,27.747,37.82,29.937,36,31.757c-1.82-1.82-4.01-4.01-4.243-4.243c-1.171-1.171-3.071-1.172-4.243,0	c-1.172,1.172-1.171,3.071,0,4.243c0.232,0.232,2.423,2.423,4.243,4.243c-1.82,1.82-4.01,4.01-4.243,4.243	c-1.171,1.171-1.171,3.071,0,4.243c1.172,1.172,3.071,1.171,4.243,0c0.232-0.232,2.423-2.423,4.243-4.243	C37.82,42.063,40.01,44.253,40.243,44.485z";
