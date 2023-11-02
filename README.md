@@ -13,3 +13,7 @@
 ## API
 ### setValue
 ### resetValue
+
+## Development
+: node esbuild.mjs
+: npm publish
