@@ -390,12 +390,12 @@ export default class Slektr {
     if (this.config.renderValueCallback) {
       let valueEl = this.config.renderValueCallback(option, this);
       if (typeof(valueEl) === 'string') {
-        el.setHTML(valueEl);
+        el.innerHTML = valueEl;
       } else {
         el.append(valueEl);
       }
     } else {
-      el.setHTML(option.label);
+      el.el.innerHTML = option.label;
     }
   }
 
@@ -459,7 +459,7 @@ export default class Slektr {
     let spam = document.createElement('spam');
     spam.className = 'slektr-propmt';
     let placeholder = this.config.placeholder || "Select option"
-    spam.setHTML(placeholder);
+    spam.textContent = placeholder;
     this.fieldEl.appendChild(spam);
   }
 

@@ -298,12 +298,12 @@ var Slektr = class {
     if (this.config.renderValueCallback) {
       let valueEl = this.config.renderValueCallback(option, this);
       if (typeof valueEl === "string") {
-        el.setHTML(valueEl);
+        el.innerHTML = valueEl;
       } else {
         el.append(valueEl);
       }
     } else {
-      el.setHTML(option.label);
+      el.el.innerHTML = option.label;
     }
   }
   renderSingleValue(value) {
@@ -353,7 +353,7 @@ var Slektr = class {
     let spam = document.createElement("spam");
     spam.className = "slektr-propmt";
     let placeholder = this.config.placeholder || "Select option";
-    spam.setHTML(placeholder);
+    spam.textContent = placeholder;
     this.fieldEl.appendChild(spam);
   }
   buildElement() {
@@ -521,13 +521,11 @@ function filterOptions(options, callback) {
   return filteredOptions;
 }
 function setOptionsForMultiple(el, value) {
-  console.log("setting value");
   for (let child of el) {
     if (el.tagName.toLowerCase() === "optgroup") {
       setOptionsForMultiple(child, value);
     } else {
       child.selected = value.findIndex((v) => v == child.value) !== -1;
-      console.log("checking", child, value);
     }
   }
 }
