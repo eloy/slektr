@@ -395,7 +395,7 @@ export default class Slektr {
         el.append(valueEl);
       }
     } else {
-      el.el.innerHTML = option.label;
+      el.innerHTML = option.label;
     }
   }
 

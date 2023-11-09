@@ -303,7 +303,7 @@ var Slektr = class {
         el.append(valueEl);
       }
     } else {
-      el.el.innerHTML = option.label;
+      el.innerHTML = option.label;
     }
   }
   renderSingleValue(value) {
