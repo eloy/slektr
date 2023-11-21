@@ -259,10 +259,10 @@ var Slektr = class {
   /**
    * Set the new value
    */
-  setValue(value) {
+  setValue(value, ignoreCallback = false) {
     this.value = value;
     this.initRemoteOptions();
-    this.onValueChanged();
+    this.onValueChanged(ignoreCallback);
   }
   isOptionSelected(value) {
     if (this.config.multiple) {

@@ -341,10 +341,10 @@ export default class Slektr {
   /**
    * Set the new value
    */
-  setValue(value) {
+  setValue(value, ignoreCallback=false) {
     this.value = value;
     this.initRemoteOptions();
-    this.onValueChanged();
+    this.onValueChanged(ignoreCallback);
   }
 
 
