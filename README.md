@@ -9,6 +9,7 @@
 ### initOptionsCallback
 ### searchOptionsCallback
 ### renderValueCallback
+### renderOptionCallback
 
 ## API
 ### setValue

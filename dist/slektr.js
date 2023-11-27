@@ -216,6 +216,8 @@ var Slektr = class {
   }
   onClickOnOption(e) {
     let option = e.target.slektr_option;
+    if (!option)
+      return;
     this.selectOption(option);
   }
   selectOption(option) {
@@ -421,6 +423,20 @@ var Slektr = class {
     groupOptions.splice(0, 0, el);
     return groupOptions;
   }
+  buildOptionValueContent(el, option) {
+    if (!option)
+      return;
+    if (this.config.renderOptionCallback) {
+      let optionEl = this.config.renderOptionCallback(option, this);
+      if (typeof optionEl === "string") {
+        el.innerHTML = optionEl;
+      } else {
+        el.append(optionEl);
+      }
+    } else {
+      el.innerHTML = option.label;
+    }
+  }
   buildOption(option, level = 0) {
     let attributes = { value: option.value };
     let el = document.createElement("div", attributes);
@@ -431,7 +447,7 @@ var Slektr = class {
       classList.push("selected");
     }
     el.className = classList.join(" ");
-    el.appendChild(document.createTextNode(option.label));
+    this.buildOptionValueContent(el, option);
     el.slektr_option = option;
     return el;
   }
