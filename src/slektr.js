@@ -266,7 +266,7 @@ export default class Slektr {
       this.value = [];
       this.originalEl.value = '';
     } else {
-      this.value = undefined;
+      this.value = '';
       this.originalEl.value = this.value;
     }
 

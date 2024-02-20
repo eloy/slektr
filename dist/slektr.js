@@ -201,7 +201,7 @@ var Slektr = class {
       this.value = [];
       this.originalEl.value = "";
     } else {
-      this.value = void 0;
+      this.value = "";
       this.originalEl.value = this.value;
     }
     this.onValueChanged();
