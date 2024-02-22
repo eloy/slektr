@@ -51,7 +51,9 @@ var Slektr = class {
   setInitialValue() {
     let value;
     if (this.config.value) {
-      return this.value = this.config.value;
+      this.value = this.config.value;
+      this.originalEl.value = this.value;
+      return this.value;
     }
     if (this.originalEl.hasAttribute("value")) {
       value = this.originalEl.getAttribute("value");
