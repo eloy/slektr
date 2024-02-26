@@ -65,6 +65,7 @@ export default class Slektr {
     this.config.initOptionsCallback(this).then(options => {
       if (options && Array.isArray(options) && options.length > 0) {
         this.options = this.options.concat(options);
+        this.setOriginalElValue(this.value);
         this.renderValue(this.value);
       }
     });
@@ -75,7 +76,6 @@ export default class Slektr {
 
     if (this.config.value) {
       this.value = this.config.value;
-      this.originalEl.value = this.value;
       return this.value;
     }
 
@@ -266,10 +266,10 @@ export default class Slektr {
     e.stopPropagation();
     if (this.config.multiple) {
       this.value = [];
-      this.originalEl.value = '';
+      this.setOriginalElValue('');
     } else {
       this.value = '';
-      this.originalEl.value = this.value;
+      this.setOriginalElValue(this.value);
     }
 
     this.onValueChanged();
@@ -312,28 +312,17 @@ export default class Slektr {
 
 
   selectRemoteOption(option) {
-    let optionEl =  document.createElement('option');
-    optionEl.value = option.value;
-    optionEl.innerHTML = option.label;
-
     if (this.config.multiple) {
       this.options.push(option);
-      this.originalEl.appendChild(optionEl);
     } else {
       this.options = [option];
-      this.originalEl.replaceChildren(optionEl);
     }
   }
 
 
   onValueChanged(ignoreCallback=false) {
     this.renderValue(this.value);
-
-    if (this.config.multiple) {
-      setOptionsForMultiple(this.originalEl, this.value);
-    } else {
-      this.originalEl.value = this.value;
-    }
+    this.setOriginalElValue(this.value);
 
     // Run the callback
     if (!ignoreCallback) {
@@ -346,11 +335,31 @@ export default class Slektr {
    */
   setValue(value, ignoreCallback=false) {
     this.value = value;
-    this.initRemoteOptions();
     this.onValueChanged(ignoreCallback);
   }
 
+  setOriginalElValue(value) {
+    this.originalEl.value = value;
 
+    // Make sure the selected option is on the original el
+    this.addOriginalElOption(value);
+
+    if (this.config.multiple) {
+      for (let v of value) selectOriginalElOptions(this.originalEl, v);
+    } else {
+      selectOriginalElOptions(this.originalEl, value);
+    }
+  }
+
+  addOriginalElOption(value, label) {
+    let childrens = Array.prototype.slice.call(this.originalEl.children);
+    if (childrens.indexOf(c => c.value == value) !== -1) return;
+
+    let optionEl =  document.createElement('option');
+    optionEl.value = value;
+    optionEl.innerHTML = label || value;
+    this.originalEl.appendChild(optionEl);
+  }
 
   isOptionSelected(value) {
     if (this.config.multiple) {
@@ -687,13 +696,12 @@ function filterOptions(options, callback) {
 }
 
 
-function setOptionsForMultiple(el, value) {
+function selectOriginalElOptions(el, value) {
   for (let child of el) {
     if (el.tagName.toLowerCase() === 'optgroup') {
-      setOptionsForMultiple(child, value);
+      selectOriginalElOptions(child, value);
     } else {
-
-      child.selected = value.findIndex(v=> v == child.value) !== -1;
+      child.selected = child.value == value;
     }
   }
 
