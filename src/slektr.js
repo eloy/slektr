@@ -299,6 +299,7 @@ export default class Slektr {
     } else {
       this.value = value;
     }
+    this.selectedOption = option;
 
     // If remote options is elabled, we should push the selected
     // option to show the value and add the option to the original el
@@ -326,12 +327,12 @@ export default class Slektr {
 
     // Run the callback
     if (!ignoreCallback) {
-      this.config.onChangeCallback && this.config.onChangeCallback({value: this.value, name: this.config.name});
+      this.config.onChangeCallback && this.config.onChangeCallback({value: this.value, name: this.config.name, option: this.selectedOption});
     }
   }
 
   /**
-   * Set the new value
+   * Api function to set the new value
    */
   setValue(value, ignoreCallback=false) {
     this.value = value;

@@ -231,6 +231,7 @@ var Slektr = class {
     } else {
       this.value = value;
     }
+    this.selectedOption = option;
     if (this.config.remoteOptions) {
       this.selectRemoteOption(option);
     }
@@ -248,11 +249,11 @@ var Slektr = class {
     this.renderValue(this.value);
     this.setOriginalElValue(this.value);
     if (!ignoreCallback) {
-      this.config.onChangeCallback && this.config.onChangeCallback({ value: this.value, name: this.config.name });
+      this.config.onChangeCallback && this.config.onChangeCallback({ value: this.value, name: this.config.name, option: this.selectedOption });
     }
   }
   /**
-   * Set the new value
+   * Api function to set the new value
    */
   setValue(value, ignoreCallback = false) {
     this.value = value;
