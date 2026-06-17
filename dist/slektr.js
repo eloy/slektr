@@ -353,13 +353,15 @@ var Slektr = class {
       let option = findOption(value, this.options);
       this.renderValueContent(badge, option);
       el.appendChild(badge);
-      let deleteButton = document.createElement("button");
-      deleteButton.className = "slektr-multiple-option-delete";
-      el.appendChild(deleteButton);
-      deleteButton.slektr_value = value;
-      let deleteIcon = deleteIconElement();
-      deleteButton.appendChild(deleteIcon);
-      deleteButton.addEventListener("click", this.removeValueFromMultiple, true);
+      if (!this.config.disableDelete) {
+        let deleteButton = document.createElement("button");
+        deleteButton.className = "slektr-multiple-option-delete";
+        el.appendChild(deleteButton);
+        deleteButton.slektr_value = value;
+        let deleteIcon = deleteIconElement();
+        deleteButton.appendChild(deleteIcon);
+        deleteButton.addEventListener("click", this.removeValueFromMultiple, true);
+      }
       this.fieldEl.appendChild(el);
     }
   }
@@ -412,6 +414,8 @@ var Slektr = class {
     this.optionsContainerListEl = list;
   }
   buildOptionsFilter(container) {
+    if (this.config.hideSearch)
+      return;
     let el = document.createElement("div");
     el.className = "slektr-options-filter-container";
     container.append(el);
